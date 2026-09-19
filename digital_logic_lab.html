@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIGITAL LOGIC LAB — SR Latch / SR Flip-Flop & Encoder Simulator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              bg: '#0b0f19',
+              card: '#121829',
+              border: '#1f293d',
+              cyan: '#00f3ff',
+              magenta: '#ff007f',
+              blue: '#0066ff',
+              amber: '#ffaa00',
+              green: '#00ff88',
+              red: '#ff3366',
+              dark: '#070a12'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          boxShadow: {
+            'glow-cyan': '0 0 15px rgba(0, 243, 255, 0.35)',
+            'glow-magenta': '0 0 15px rgba(255, 0, 127, 0.35)',
+            'glow-blue': '0 0 15px rgba(0, 102, 255, 0.35)',
+            'glow-amber': '0 0 15px rgba(255, 170, 0, 0.35)',
+            'glow-green': '0 0 15px rgba(0, 255, 136, 0.35)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Cyberpunk & Glassmorphism Styles */
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-image: radial-gradient(rgba(0, 243, 255, 0.08) 1px, transparent 1px),
+                        radial-gradient(rgba(255, 0, 127, 0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+    }
+    .glass-panel {
+      background: rgba(18, 24, 41, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(31, 41, 61, 0.8);
+    }
+    .glass-card {
+      background: rgba(22, 30, 50, 0.6);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(0, 243, 255, 0.15);
+      transition: all 0.25s ease;
+    }
+    .glass-card:hover {
+      border-color: rgba(0, 243, 255, 0.4);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
+    }
+    /* Animated wire paths */
+    @keyframes wireFlow {
+      from { stroke-dashoffset: 20; }
+      to { stroke-dashoffset: 0; }
+    }
+    .active-wire-flow {
+      stroke-dasharray: 6 3;
+      animation: wireFlow 0.8s linear infinite;
+    }
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00f3ff; }
+
+    /* Modal Animation */
+    .modal-enter { animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    
+    /* Reduced Motion Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      .active-wire-flow { animation: none !important; }
+      * { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col grid-bg text-slate-200">
+  <!-- HEADER / HUD NAVBAR -->
+  <header class="sticky top-0 z-50 glass-panel border-b border-cyber-border/80 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+      <!-- Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('home')">
+        <div class="w-10 h-10 rounded-lg bg-cyber-blue/20 border border-cyber-cyan flex items-center justify-center shadow-glow-cyan">
+          <i data-lucide="cpu" class="w-6 h-6 text-cyber-cyan"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyber-cyan via-blue-400 to-cyber-magenta text-lg">DIGITAL LOGIC LAB</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 font-mono">v3.0 CIA</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">SR Latch / Flip-Flop & Encoder Interactive Suite</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden xl:flex items-center gap-1 bg-cyber-dark/80 p-1.5 rounded-xl border border-cyber-border" id="desktop-nav">
+        <button onclick="navigateTo('home')" id="nav-home" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-cyber-cyan bg-cyber-blue/20 border border-cyber-cyan/40">
+          <i data-lucide="home" class="w-3.5 h-3.5"></i> HOME
+        </button>
+        <button onclick="navigateTo('learn')" id="nav-learn" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white">
+          <i data-lucide="book-open" class="w-3.5 h-3.5"></i> LEARN
+        </button>
+        <button onclick="navigateTo('sr-lab')" id="nav-sr-lab" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white">
+          <i data-lucide="circuit-board" class="w-3.5 h-3.5"></i> SR MEMORY LAB
+        </button>
+        <button onclick="navigateTo('encoder-lab')" id="nav-encoder-lab" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white">
+          <i data-lucide="binary" class="w-3.5 h-3.5"></i> ENCODER LAB
+        </button>
+        <button onclick="navigateTo('timing')" id="nav-timing" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white">
+          <i data-lucide="clock" class="w-3.5 h-3.5"></i> TIMING & FAMILY
+        </button>
+        <button onclick="navigateTo('challenges')" id="nav-challenges" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white">
+          <i data-lucide="trophy" class="w-3.5 h-3.5"></i> CHALLENGES
+        </button>
+        <button onclick="navigateTo('about')" id="nav-about" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white">
+          <i data-lucide="info" class="w-3.5 h-3.5"></i> README
+        </button>
+      </nav>
+
+      <!-- Controls & Status -->
+      <div class="flex items-center gap-3">
+        <button onclick="toggleAudio()" id="audio-btn" class="p-2 rounded-lg bg-cyber-card border border-cyber-border text-slate-400 hover:text-cyber-cyan transition-colors" title="Toggle Sound FX">
+          <i data-lucide="volume-x" class="w-4 h-4" id="audio-icon"></i>
+        </button>
+        <button onclick="toggleMobileMenu()" class="xl:hidden p-2 rounded-lg bg-cyber-card border border-cyber-border text-slate-300">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-green/10 border border-cyber-green/30 text-cyber-green text-xs font-mono">
+          <span class="w-2 h-2 rounded-full bg-cyber-green animate-pulse"></span>
+          SIMULATOR READY
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-menu" class="hidden xl:hidden mt-3 pt-3 border-t border-cyber-border flex flex-col gap-2">
+      <button onclick="navigateTo('home'); toggleMobileMenu()" class="px-4 py-2 rounded-lg text-sm text-left flex items-center gap-2 text-cyber-cyan bg-cyber-blue/10"><i data-lucide="home" class="w-4 h-4"></i> HOME</button>
+      <button onclick="navigateTo('learn'); toggleMobileMenu()" class="px-4 py-2 rounded-lg text-sm text-left flex items-center gap-2 text-slate-300"><i data-lucide="book-open" class="w-4 h-4"></i> LEARN CURRICULUM</button>
+      <button onclick="navigateTo('sr-lab'); toggleMobileMenu()" class="px-4 py-2 rounded-lg text-sm text-left flex items-center gap-2 text-slate-300"><i data-lucide="circuit-board" class="w-4 h-4"></i> SR MEMORY LAB</button>
+      <button onclick="navigateTo('encoder-lab'); toggleMobileMenu()" class="px-4 py-2 rounded-lg text-sm text-left flex items-center gap-2 text-slate-300"><i data-lucide="binary" class="w-4 h-4"></i> ENCODER LAB</button>
+      <button onclick="navigateTo('timing'); toggleMobileMenu()" class="px-4 py-2 rounded-lg text-sm text-left flex items-center gap-2 text-slate-300"><i data-lucide="clock" class="w-4 h-4"></i> TIMING & FAMILY</button>
+      <button onclick="navigateTo('challenges'); toggleMobileMenu()" class="px-4 py-2 rounded-lg text-sm text-left flex items-center gap-2 text-slate-300"><i data-lucide="trophy" class="w-4 h-4"></i> CHALLENGES</button>
+      <button onclick="navigateTo('about'); toggleMobileMenu()" class="px-4 py-2 rounded-lg text-sm text-left flex items-center gap-2 text-slate-300"><i data-lucide="info" class="w-4 h-4"></i> ABOUT & README</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 lg:p-6 space-y-8">
+
+    <!-- ================= PAGE 1: HOME / LANDING PAGE ================= -->
+    <section id="page-home" class="page-view space-y-10">
+      <!-- Hero Banner -->
+      <div class="relative rounded-2xl glass-panel p-8 lg:p-12 overflow-hidden border border-cyber-cyan/30 shadow-2xl">
+        <div class="absolute -right-20 -bottom-20 w-96 h-96 bg-cyber-blue/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-20 -top-20 w-96 h-96 bg-cyber-magenta/15 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="relative z-10 max-w-3xl space-y-6">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan text-xs font-mono">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> COLLEGE DIGITAL LOGIC CIA III PROJECT
+          </div>
+          <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
+            DIGITAL LOGIC <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyber-cyan via-blue-400 to-cyber-magenta">LAB</span>
+          </h1>
+          <p class="text-lg text-slate-300 font-light leading-relaxed">
+            <span class="text-cyber-cyan font-mono italic">"Don't just read the circuit. Make it think."</span><br>
+            Explore memory, feedback loops, clocking synchronization, and binary encoding through interactive real-time circuit simulation.
+          </p>
+          
+          <div class="flex flex-wrap gap-4 pt-2">
+            <button onclick="navigateTo('sr-lab')" class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyber-blue to-cyber-cyan text-slate-950 font-bold hover:shadow-glow-cyan transition-all flex items-center gap-2 text-sm">
+              <i data-lucide="play" class="w-4 h-4"></i> ENTER SR MEMORY LAB
+            </button>
+            <button onclick="navigateTo('encoder-lab')" class="px-6 py-3 rounded-xl glass-card text-cyber-cyan font-bold hover:bg-cyber-cyan/10 border border-cyber-cyan/40 transition-all flex items-center gap-2 text-sm">
+              <i data-lucide="binary" class="w-4 h-4"></i> ENTER ENCODER LAB
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Major Interactive Feature Cards -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- SR Latch / FF Card -->
+        <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 relative overflow-hidden group">
+          <div class="space-y-3">
+            <div class="w-12 h-12 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan shadow-glow-cyan">
+              <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white">SR Latch & Flip-Flop</h2>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Explore how digital circuits remember a bit. Features active-low NAND-based ($S', R'$), active-high NOR-based ($S, R$), gated level-sensitive, and edge-triggered clocking configurations.
+            </p>
+          </div>
+          <button onclick="navigateTo('sr-lab')" class="w-full py-2.5 rounded-xl bg-cyber-dark border border-cyber-cyan/30 text-cyber-cyan text-xs font-mono font-bold hover:bg-cyber-cyan hover:text-slate-950 transition-all flex items-center justify-center gap-2">
+            ENTER LAB →
+          </button>
+        </div>
+
+        <!-- Encoder Card -->
+        <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 relative overflow-hidden group">
+          <div class="space-y-3">
+            <div class="w-12 h-12 rounded-xl bg-cyber-magenta/10 border border-cyber-magenta/30 flex items-center justify-center text-cyber-magenta shadow-glow-magenta">
+              <i data-lucide="arrow-down-0-1" class="w-6 h-6"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white">4-to-2 Encoder Machine</h2>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Turn active input signal lines into binary output code ($Y_1 Y_0$). Inspect interactive OR-gate logic, standard active line rules, and priority encoding modes.
+            </p>
+          </div>
+          <button onclick="navigateTo('encoder-lab')" class="w-full py-2.5 rounded-xl bg-cyber-dark border border-cyber-magenta/30 text-cyber-magenta text-xs font-mono font-bold hover:bg-cyber-magenta hover:text-slate-950 transition-all flex items-center justify-center gap-2">
+            ENTER LAB →
+          </button>
+        </div>
+      </div>
+
+      <!-- Combinational vs Sequential Interactive Architecture Comparison Widget -->
+      <div class="glass-panel rounded-2xl p-6 lg:p-8 space-y-6">
+        <div class="flex flex-wrap justify-between items-center gap-4 border-b border-cyber-border pb-4">
+          <div>
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="git-compare" class="w-5 h-5 text-cyber-cyan"></i>
+              Combinational vs Sequential Logic Architecture
+            </h3>
+            <p class="text-xs text-slate-400">Class Foundation: Compare how memory feedback alters output dependency</p>
+          </div>
+          <div class="flex items-center gap-2 bg-cyber-dark p-1 rounded-xl border border-cyber-border text-xs">
+            <button onclick="setArchMode('combinational')" id="arch-btn-comb" class="px-3 py-1.5 rounded-lg font-mono font-bold text-cyber-cyan bg-cyber-blue/20">COMBINATIONAL</button>
+            <button onclick="setArchMode('sequential')" id="arch-btn-seq" class="px-3 py-1.5 rounded-lg font-mono font-bold text-slate-400 hover:text-white">SEQUENTIAL</button>
+          </div>
+        </div>
+
+        <!-- Interactive Visual Blueprint -->
+        <div class="grid lg:grid-cols-12 gap-6 items-center">
+          <div class="lg:col-span-7 bg-cyber-dark/80 rounded-xl p-6 border border-cyber-border relative min-h-[260px] flex items-center justify-center" id="arch-diagram-container">
+            <!-- Dynamic SVG Blueprint Rendered via JS -->
+          </div>
+          <div class="lg:col-span-5 space-y-4" id="arch-description">
+            <!-- Text Description updated via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 2: LEARN CURRICULUM ================= -->
+    <section id="page-learn" class="page-view space-y-8 hidden">
+      <div class="glass-panel rounded-2xl p-6 lg:p-8 space-y-6">
+        <div class="border-b border-cyber-border pb-4 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="book-open" class="w-6 h-6 text-cyber-cyan"></i>
+              Interactive Digital Logic Curriculum
+            </h2>
+            <p class="text-xs text-slate-400">Core class notes step-by-step interactive breakdown</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="stepLearn(-1)" id="learn-prev-btn" class="px-3 py-1.5 rounded-lg bg-cyber-card border border-cyber-border text-xs font-mono text-slate-300 hover:text-white disabled:opacity-50">← PREV</button>
+            <span id="learn-step-indicator" class="text-xs font-mono text-cyber-cyan px-2">Step 1 / 4</span>
+            <button onclick="stepLearn(1)" id="learn-next-btn" class="px-3 py-1.5 rounded-lg bg-cyber-blue/20 border border-cyber-cyan text-xs font-mono text-cyber-cyan hover:bg-cyber-cyan hover:text-slate-950 transition-all">NEXT →</button>
+          </div>
+        </div>
+
+        <!-- Curriculum Step Display -->
+        <div id="learn-card-content" class="grid lg:grid-cols-12 gap-6 items-center min-h-[350px]">
+          <!-- Dynamic Content Rendered Here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 3: SR MEMORY LAB ================= -->
+    <section id="page-sr-lab" class="page-view space-y-6 hidden">
+      <!-- Top Switcher HUD Bar -->
+      <div class="glass-panel rounded-2xl p-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan">
+            <i data-lucide="circuit-board" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold text-white">SR MEMORY LAB</h2>
+            <p class="text-xs text-slate-400">Interactive Gate-Level Simulation Engine</p>
+          </div>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="text-xs font-mono text-slate-400 mr-1">CIRCUIT ARCHITECTURE:</label>
+          <select id="sr-arch-select" onchange="changeSRArchitecture(this.value)" class="bg-cyber-dark border border-cyber-cyan/40 text-cyber-cyan rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-cyber-cyan">
+            <option value="nand-latch">NAND SR Latch (Active-Low S', R') [Class Notes Standard]</option>
+            <option value="nor-latch">NOR SR Latch (Active-High S, R)</option>
+            <option value="gated-sr">Gated Clocked SR Latch (Level-Sensitive EN)</option>
+            <option value="edge-sr">Edge-Triggered SR Flip-Flop (Rising Edge)</option>
+          </select>
+          <button onclick="triggerMemoryTest()" class="px-3 py-1.5 rounded-xl bg-cyber-magenta/20 border border-cyber-magenta text-cyber-magenta text-xs font-mono font-bold hover:bg-cyber-magenta hover:text-white transition-all flex items-center gap-1.5">
+            <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> TEST MEMORY
+          </button>
+          <button onclick="startSRGuidedTour()" class="px-3 py-1.5 rounded-xl bg-cyber-blue/20 border border-cyber-blue text-cyber-blue text-xs font-mono font-bold hover:bg-cyber-blue hover:text-white transition-all flex items-center gap-1.5">
+            <i data-lucide="compass" class="w-3.5 h-3.5"></i> CIRCUIT TOUR
+          </button>
+          <button onclick="resetSRSimulator()" class="p-1.5 rounded-xl bg-cyber-dark border border-cyber-border text-slate-400 hover:text-white" title="Reset Circuit">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Interactive Circuit Canvas & Live HUD -->
+      <div class="grid lg:grid-cols-12 gap-6">
+        <!-- Interactive Circuit Diagram Canvas (8 cols) -->
+        <div class="lg:col-span-8 glass-panel rounded-2xl p-4 flex flex-col justify-between space-y-4 relative min-h-[420px]">
+          <div class="flex justify-between items-center text-xs font-mono px-2 text-slate-400">
+            <span>CLICK PINS TO TOGGLE INPUTS | CLICK GATES/WIRES TO INSPECT</span>
+            <span id="sr-convention-badge" class="px-2 py-0.5 rounded bg-cyber-amber/10 border border-cyber-amber/30 text-cyber-amber">ACTIVE-LOW CONVENTION</span>
+          </div>
+
+          <!-- SVG CIRCUIT CONTAINER -->
+          <div id="sr-svg-container" class="w-full h-full flex items-center justify-center my-2">
+            <!-- Dynamic Circuit SVG Injected via JavaScript -->
+          </div>
+
+          <!-- Quick Interactive Inputs Bar -->
+          <div class="flex flex-wrap items-center justify-between gap-4 bg-cyber-dark/80 p-3 rounded-xl border border-cyber-border">
+            <div class="flex items-center gap-4" id="sr-input-controls">
+              <!-- Rendered via JS -->
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-mono text-slate-400">OUTPUTS:</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-mono">Q = <strong id="sr-q-val" class="text-cyber-cyan text-sm">1</strong></span>
+                <span class="text-xs font-mono">Q̅ = <strong id="sr-qbar-val" class="text-slate-400 text-sm">0</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side Status & Truth Table HUD Panel (4 cols) -->
+        <div class="lg:col-span-4 space-y-6">
+          <!-- State Indicator Badge -->
+          <div class="glass-panel rounded-2xl p-5 space-y-3 border-l-4" id="sr-state-card">
+            <span class="text-[10px] font-mono tracking-widest text-slate-400 uppercase">CURRENT LOGIC STATE</span>
+            <div class="flex items-center justify-between">
+              <h3 id="sr-state-title" class="text-2xl font-mono font-extrabold text-cyber-green">SET</h3>
+              <span id="sr-state-icon" class="w-8 h-8 rounded-lg bg-cyber-green/20 border border-cyber-green/40 flex items-center justify-center text-cyber-green font-bold">S</span>
+            </div>
+            <p id="sr-state-desc" class="text-xs text-slate-300 leading-relaxed">
+              Circuit output Q is forced HIGH ('1'). Output Q̅ is LOW ('0'). Memory stored.
+            </p>
+          </div>
+
+          <!-- Interactive Truth Table -->
+          <div class="glass-panel rounded-2xl p-5 space-y-3">
+            <div class="flex justify-between items-center border-b border-cyber-border pb-2">
+              <h4 class="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                <i data-lucide="table" class="w-3.5 h-3.5 text-cyber-cyan"></i> TRUTH TABLE CONTROL
+              </h4>
+              <span class="text-[10px] font-mono text-slate-400">CLICK ROW TO APPLY</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs font-mono text-center" id="sr-truth-table">
+                <!-- Dynamically populated table -->
+              </table>
+            </div>
+          </div>
+
+          <!-- Real-Time Event Signal Console -->
+          <div class="glass-panel rounded-2xl p-4 space-y-2">
+            <div class="flex justify-between items-center text-[11px] font-mono text-slate-400 border-b border-cyber-border pb-1">
+              <span>SIGNAL LOG CONSOLE</span>
+              <button onclick="clearSRLogs()" class="text-[10px] hover:text-cyber-cyan">CLEAR</button>
+            </div>
+            <div id="sr-event-log" class="h-28 overflow-y-auto space-y-1 text-[11px] font-mono pr-1">
+              <!-- Logs stream here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 4: ENCODER LAB ================= -->
+    <section id="page-encoder-lab" class="page-view space-y-6 hidden">
+      <!-- Header -->
+      <div class="glass-panel rounded-2xl p-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-cyber-magenta/10 border border-cyber-magenta/30 text-cyber-magenta">
+            <i data-lucide="binary" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold text-white">4-TO-2 ENCODER LAB</h2>
+            <p class="text-xs text-slate-400">Signal Sorting Machine & Priority Logic Engine</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="text-xs font-mono text-slate-400">ENCODER TYPE:</label>
+          <div class="flex items-center gap-1 bg-cyber-dark p-1 rounded-xl border border-cyber-border">
+            <button onclick="setEncoderMode('standard')" id="enc-btn-std" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-cyber-cyan bg-cyber-blue/20">STANDARD</button>
+            <button onclick="setEncoderMode('priority')" id="enc-btn-prio" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white">PRIORITY</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Visual Grid -->
+      <div class="grid lg:grid-cols-12 gap-6">
+        <!-- SVG Machine Visualizer (8 cols) -->
+        <div class="lg:col-span-8 glass-panel rounded-2xl p-6 flex flex-col justify-between space-y-6 min-h-[420px]">
+          <div id="encoder-svg-container" class="w-full flex items-center justify-center my-2">
+            <!-- Dynamic SVG Injected -->
+          </div>
+
+          <!-- Input Lines Switch Panel -->
+          <div class="grid grid-cols-4 gap-3 bg-cyber-dark/80 p-4 rounded-xl border border-cyber-border">
+            <button onclick="toggleEncoderInput(0)" id="enc-in-0" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1">
+              <span class="text-[10px] font-mono text-slate-400">INPUT D0</span>
+              <span class="font-mono font-bold text-sm">LOW (0)</span>
+            </button>
+            <button onclick="toggleEncoderInput(1)" id="enc-in-1" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1">
+              <span class="text-[10px] font-mono text-slate-400">INPUT D1</span>
+              <span class="font-mono font-bold text-sm">LOW (0)</span>
+            </button>
+            <button onclick="toggleEncoderInput(2)" id="enc-in-2" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1">
+              <span class="text-[10px] font-mono text-slate-400">INPUT D2</span>
+              <span class="font-mono font-bold text-sm">LOW (0)</span>
+            </button>
+            <button onclick="toggleEncoderInput(3)" id="enc-in-3" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1">
+              <span class="text-[10px] font-mono text-slate-400">INPUT D3</span>
+              <span class="font-mono font-bold text-sm">LOW (0)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Output & Logic HUD (4 cols) -->
+        <div class="lg:col-span-4 space-y-6">
+          <!-- Live Encoded Output Card -->
+          <div class="glass-panel rounded-2xl p-5 space-y-4 text-center relative overflow-hidden" id="enc-output-card">
+            <span class="text-[10px] font-mono tracking-widest text-slate-400 uppercase">BINARY ENCODED OUTPUT</span>
+            
+            <div class="flex items-center justify-center gap-4 py-2">
+              <div class="bg-cyber-dark/90 p-3 rounded-xl border border-cyber-magenta/40 w-20">
+                <span class="text-[10px] font-mono text-slate-400 block">Y1 (MSB)</span>
+                <span id="enc-y1-val" class="text-3xl font-mono font-extrabold text-cyber-magenta">0</span>
+              </div>
+              <div class="bg-cyber-dark/90 p-3 rounded-xl border border-cyber-magenta/40 w-20">
+                <span class="text-[10px] font-mono text-slate-400 block">Y0 (LSB)</span>
+                <span id="enc-y0-val" class="text-3xl font-mono font-extrabold text-cyber-magenta">0</span>
+              </div>
+            </div>
+
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-card border border-cyber-border text-xs font-mono text-slate-300">
+              EQUIVALENT DECIMAL = <strong id="enc-dec-val" class="text-cyber-cyan">0</strong>
+            </div>
+
+            <!-- Warning Box for Multiple Inputs -->
+            <div id="enc-warning-box" class="hidden text-left p-3 rounded-xl bg-cyber-red/10 border border-cyber-red/40 text-cyber-red text-xs space-y-1">
+              <div class="font-bold flex items-center gap-1">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i> MULTIPLE INPUTS ACTIVE
+              </div>
+              <p class="text-[11px] text-slate-300">
+                Standard 4-to-2 encoder logic assumes exactly one active input at a time. Switch to <strong>Priority Mode</strong> to enforce highest priority input encoding ($D_3 > D_2 > D_1 > D_0$).
+              </p>
+            </div>
+          </div>
+
+          <!-- Truth Table -->
+          <div class="glass-panel rounded-2xl p-5 space-y-3">
+            <h4 class="text-xs font-mono font-bold text-white flex items-center gap-1.5 border-b border-cyber-border pb-2">
+              <i data-lucide="table" class="w-3.5 h-3.5 text-cyber-magenta"></i> ENCODER TRUTH TABLE
+            </h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs font-mono text-center" id="encoder-truth-table">
+                <!-- Dynamically populated -->
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 5: TIMING & FLIP-FLOP FAMILY ================= -->
+    <section id="page-timing" class="page-view space-y-8 hidden">
+      <!-- Interactive Timing Lab -->
+      <div class="glass-panel rounded-2xl p-6 lg:p-8 space-y-6">
+        <div class="border-b border-cyber-border pb-4">
+          <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="clock" class="w-6 h-6 text-cyber-amber"></i>
+            Operating Characteristics & Setup / Hold Timing Lab
+          </h2>
+          <p class="text-xs text-slate-400">Class Foundation: Interactive waveform timeline & clock constraint visualization</p>
+        </div>
+
+        <div class="grid lg:grid-cols-12 gap-6 items-center">
+          <div class="lg:col-span-7 bg-cyber-dark/80 rounded-xl p-6 border border-cyber-border space-y-4">
+            <div class="flex justify-between items-center text-xs font-mono">
+              <span class="text-slate-400">CLOCK-TO-DATA TRANSITION TIMELINE</span>
+              <span id="timing-status-badge" class="px-2 py-0.5 rounded bg-cyber-green/10 text-cyber-green border border-cyber-green/30">VALID TIMING</span>
+            </div>
+
+            <!-- SVG Waveform -->
+            <div id="timing-svg-container" class="w-full h-48">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Control Slider -->
+            <div class="space-y-2 bg-cyber-card p-3 rounded-xl border border-cyber-border">
+              <div class="flex justify-between text-xs font-mono">
+                <label>DATA TRANSITION OFFSET RELATIVE TO CLOCK EDGE:</label>
+                <span id="timing-offset-val" class="text-cyber-cyan">-20 ns</span>
+              </div>
+              <input type="range" min="-50" max="50" value="-20" id="timing-slider" oninput="updateTimingLab(this.value)" class="w-full accent-cyber-cyan cursor-pointer">
+              <div class="flex justify-between text-[10px] font-mono text-slate-500">
+                <span>-50ns (Early Input)</span>
+                <span>0ns (Clock Edge)</span>
+                <span>+50ns (Late Input)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Explanatory Panel -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="glass-card p-4 rounded-xl space-y-2 border-l-2 border-cyber-amber">
+              <h4 class="text-xs font-mono font-bold text-cyber-amber">SETUP TIME (t_su)</h4>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                The minimum time interval the data input signal ($D$ or $S/R$) must remain stable <strong>BEFORE</strong> the active clock transition edge.
+              </p>
+            </div>
+            <div class="glass-card p-4 rounded-xl space-y-2 border-l-2 border-cyber-cyan">
+              <h4 class="text-xs font-mono font-bold text-cyber-cyan">HOLD TIME (t_h)</h4>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                The minimum time interval the data input signal must remain stable <strong>AFTER</strong> the active clock transition edge.
+              </p>
+            </div>
+            <div class="glass-card p-4 rounded-xl space-y-2 border-l-2 border-cyber-magenta">
+              <h4 class="text-xs font-mono font-bold text-cyber-magenta">CLOCK-TO-Q DELAY (t_cq)</h4>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                The propagation delay time taken from the triggering edge of the clock signal until output $Q$ reaches its final valid logic level.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Master-Slave & Race-Around Visualizer -->
+      <div class="glass-panel rounded-2xl p-6 lg:p-8 space-y-6">
+        <div class="border-b border-cyber-border pb-4">
+          <h3 class="text-xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="layers" class="w-5 h-5 text-cyber-cyan"></i>
+            Master-Slave Architecture & Race-Around Prevention
+          </h3>
+          <p class="text-xs text-slate-400">Class Foundation: Eliminating level-sensitive output oscillations during prolonged active clock pulses</p>
+        </div>
+
+        <div class="grid lg:grid-cols-12 gap-6 items-center">
+          <div class="lg:col-span-7 bg-cyber-dark/80 rounded-xl p-6 border border-cyber-border space-y-4">
+            <div id="masterslave-svg-container" class="w-full h-52">
+              <!-- Rendered via JS -->
+            </div>
+            <div class="flex items-center justify-center gap-4">
+              <button onclick="stepMasterSlaveClock()" class="px-4 py-2 rounded-xl bg-cyber-blue/20 border border-cyber-cyan text-cyber-cyan font-mono text-xs font-bold hover:bg-cyber-cyan hover:text-slate-950 transition-all flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> TOGGLE CLOCK PULSE (CLK: <span id="ms-clk-val">1</span>)
+              </button>
+            </div>
+          </div>
+
+          <div class="lg:col-span-5 space-y-3 text-xs text-slate-300 leading-relaxed">
+            <div class="glass-card p-4 rounded-xl space-y-2">
+              <h4 class="font-bold text-white">How Master-Slave Works:</h4>
+              <p>
+                1. When <strong class="text-cyber-cyan">CLK = 1</strong>: The <strong>Master stage</strong> is active and samples inputs, while the Slave stage is isolated.
+              </p>
+              <p>
+                2. When <strong class="text-cyber-cyan">CLK = 0</strong>: The Master stage locks, and the <strong>Slave stage</strong> activates, passing the Master's output to $Q$.
+              </p>
+              <p class="text-cyber-amber">
+                This two-stage isolation ensures output $Q$ can only change state once per clock cycle, preventing continuous toggling race conditions!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flip-Flop Family Cards -->
+      <div class="space-y-4">
+        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+          <i data-lucide="grid" class="w-5 h-5 text-cyber-magenta"></i>
+          Flip-Flop Family Overview
+        </h3>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="glass-card p-5 rounded-2xl space-y-3">
+            <span class="text-xs font-mono text-cyber-cyan px-2 py-0.5 rounded bg-cyber-cyan/10 border border-cyber-cyan/30">SR FLIP-FLOP</span>
+            <h4 class="text-lg font-bold text-white">Set / Reset</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">Fundamental memory element. Sets $Q=1$ or Resets $Q=0$. Has invalid $S=1, R=1$ condition in basic gates.</p>
+          </div>
+          <div class="glass-card p-5 rounded-2xl space-y-3">
+            <span class="text-xs font-mono text-cyber-magenta px-2 py-0.5 rounded bg-cyber-magenta/10 border border-cyber-magenta/30">D FLIP-FLOP</span>
+            <h4 class="text-lg font-bold text-white">Data / Delay</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">Eliminates invalid states by connecting $R = \bar{S}$. Output $Q$ follows input $D$ on clock edge.</p>
+          </div>
+          <div class="glass-card p-5 rounded-2xl space-y-3">
+            <span class="text-xs font-mono text-cyber-green px-2 py-0.5 rounded bg-cyber-green/10 border border-cyber-green/30">JK FLIP-FLOP</span>
+            <h4 class="text-lg font-bold text-white">Universal / Toggle</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">Solves invalid SR state. When $J=1, K=1$, the output toggles state ($Q_{next} = \bar{Q}$).</p>
+          </div>
+          <div class="glass-card p-5 rounded-2xl space-y-3">
+            <span class="text-xs font-mono text-cyber-amber px-2 py-0.5 rounded bg-cyber-amber/10 border border-cyber-amber/30">T FLIP-FLOP</span>
+            <h4 class="text-lg font-bold text-white">Toggle / Divider</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">Single input $T$. When $T=1$, output toggles on every clock edge. Widely used for frequency division.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 6: CHALLENGES & QUIZ ================= -->
+    <section id="page-challenges" class="page-view space-y-6 hidden">
+      <div class="glass-panel rounded-2xl p-6 lg:p-8 space-y-6">
+        <div class="flex flex-wrap justify-between items-center gap-4 border-b border-cyber-border pb-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="trophy" class="w-6 h-6 text-cyber-amber"></i>
+              Interactive Challenges & Assessment
+            </h2>
+            <p class="text-xs text-slate-400">Test your digital logic understanding with immediate simulator feedback</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="px-3 py-1 rounded-xl bg-cyber-amber/10 border border-cyber-amber/30 text-cyber-amber font-mono text-xs font-bold">
+              SCORE: <span id="challenge-score">0</span> / 400 PTS
+            </div>
+          </div>
+        </div>
+
+        <!-- Challenge Cards Grid -->
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- Challenge 1 -->
+          <div class="glass-card rounded-2xl p-5 space-y-4 border-l-4 border-cyber-cyan" id="ch-card-1">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-mono text-cyber-cyan">CHALLENGE 01 — 100 PTS</span>
+              <span id="ch-status-1" class="text-xs font-mono text-slate-500">UNSOLVED</span>
+            </div>
+            <h3 class="text-base font-bold text-white">Set Output Q = 1 in Active-Low NAND SR Latch</h3>
+            <p class="text-xs text-slate-300">
+              In a NAND-based SR latch with active-low inputs ($S', R'$), what inputs force state to SET ($Q=1$)?
+            </p>
+            <div class="space-y-2">
+              <button onclick="submitChallenge(1, 'A')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-cyan text-xs font-mono text-left transition-all">A) S' = 0, R' = 1</button>
+              <button onclick="submitChallenge(1, 'B')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-cyan text-xs font-mono text-left transition-all">B) S' = 1, R' = 0</button>
+              <button onclick="submitChallenge(1, 'C')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-cyan text-xs font-mono text-left transition-all">C) S' = 1, R' = 1</button>
+            </div>
+          </div>
+
+          <!-- Challenge 2 -->
+          <div class="glass-card rounded-2xl p-5 space-y-4 border-l-4 border-cyber-magenta" id="ch-card-2">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-mono text-cyber-magenta">CHALLENGE 02 — 100 PTS</span>
+              <span id="ch-status-2" class="text-xs font-mono text-slate-500">UNSOLVED</span>
+            </div>
+            <h3 class="text-base font-bold text-white">Lock Memory into HOLD State</h3>
+            <p class="text-xs text-slate-300">
+              In an active-high NOR SR latch, after setting or resetting, which input pair preserves the stored bit without changes?
+            </p>
+            <div class="space-y-2">
+              <button onclick="submitChallenge(2, 'A')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-magenta text-xs font-mono text-left transition-all">A) S = 1, R = 1</button>
+              <button onclick="submitChallenge(2, 'B')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-magenta text-xs font-mono text-left transition-all">B) S = 0, R = 0</button>
+              <button onclick="submitChallenge(2, 'C')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-magenta text-xs font-mono text-left transition-all">C) S = 1, R = 0</button>
+            </div>
+          </div>
+
+          <!-- Challenge 3 -->
+          <div class="glass-card rounded-2xl p-5 space-y-4 border-l-4 border-cyber-green" id="ch-card-3">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-mono text-cyber-green">CHALLENGE 03 — 100 PTS</span>
+              <span id="ch-status-3" class="text-xs font-mono text-slate-500">UNSOLVED</span>
+            </div>
+            <h3 class="text-base font-bold text-white">Encode Decimal Value 2</h3>
+            <p class="text-xs text-slate-300">
+              Which single input line in a 4-to-2 encoder must be active to produce binary output Y1 Y0 = 1 0?
+            </p>
+            <div class="space-y-2">
+              <button onclick="submitChallenge(3, 'A')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-green text-xs font-mono text-left transition-all">A) Activate Input D1</button>
+              <button onclick="submitChallenge(3, 'B')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-green text-xs font-mono text-left transition-all">B) Activate Input D2</button>
+              <button onclick="submitChallenge(3, 'C')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-green text-xs font-mono text-left transition-all">C) Activate Input D3</button>
+            </div>
+          </div>
+
+          <!-- Challenge 4 -->
+          <div class="glass-card rounded-2xl p-5 space-y-4 border-l-4 border-cyber-amber" id="ch-card-4">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-mono text-cyber-amber">CHALLENGE 04 — 100 PTS</span>
+              <span id="ch-status-4" class="text-xs font-mono text-slate-500">UNSOLVED</span>
+            </div>
+            <h3 class="text-base font-bold text-white">Edge-Triggered Sampling Rule</h3>
+            <p class="text-xs text-slate-300">
+              When does a positive (rising) edge-triggered flip-flop sample its inputs to update state $Q$?
+            </p>
+            <div class="space-y-2">
+              <button onclick="submitChallenge(4, 'A')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-amber text-xs font-mono text-left transition-all">A) Throughout the entire HIGH clock level (CLK = 1)</button>
+              <button onclick="submitChallenge(4, 'B')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-amber text-xs font-mono text-left transition-all">B) Only during the instantaneous 0 → 1 clock transition</button>
+              <button onclick="submitChallenge(4, 'C')" class="w-full py-2 px-3 rounded-xl bg-cyber-dark border border-cyber-border hover:border-cyber-amber text-xs font-mono text-left transition-all">C) Only when clock returns from 1 to 0</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 7: ABOUT & README ================= -->
+    <section id="page-about" class="page-view space-y-6 hidden">
+      <div class="glass-panel rounded-2xl p-6 lg:p-8 space-y-6">
+        <div class="border-b border-cyber-border pb-4 flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="info" class="w-6 h-6 text-cyber-cyan"></i>
+              Project Documentation & README
+            </h2>
+            <p class="text-xs text-slate-400">College Digital Logic CIA III Project Submission</p>
+          </div>
+          <button onclick="copyReadmeText()" class="px-3 py-1.5 rounded-xl bg-cyber-dark border border-cyber-cyan/40 text-cyber-cyan text-xs font-mono flex items-center gap-1.5 hover:bg-cyber-cyan hover:text-slate-950 transition-all">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> COPY MARKDOWN
+          </button>
+        </div>
+
+        <div class="prose prose-invert max-w-none text-xs text-slate-300 space-y-4 font-mono leading-relaxed bg-cyber-dark/80 p-6 rounded-xl border border-cyber-border">
+          <h3 class="text-sm font-bold text-cyber-cyan uppercase">Project Overview</h3>
+          <p>
+            <strong>Project Title:</strong> DIGITAL LOGIC LAB — SR Latch / SR Flip-Flop & Encoder Interactive Suite<br>
+            <strong>Scope:</strong> Interactive simulation of fundamental memory feedback logic (SR Latch/Flip-Flop) and combinational signal sorting (4-to-2 Encoder).
+          </p>
+
+          <h3 class="text-sm font-bold text-cyber-cyan uppercase">Logic Conventions Summary</h3>
+          <ul class="list-disc pl-5 space-y-1 text-slate-300">
+            <li><strong>NAND SR Latch:</strong> Active-Low inputs ($S', R'$ or $\bar{S}, \bar{R}$). Set condition occurs when $S'=0, R'=1$ ($Q=1$). Invalid state occurs when $S'=0, R'=0$.</li>
+            <li><strong>NOR SR Latch:</strong> Active-High inputs ($S, R$). Set condition occurs when $S=1, R=0$ ($Q=1$). Invalid state occurs when $S=1, R=1$.</li>
+            <li><strong>4-to-2 Encoder:</strong> $Y_1 = D_2 + D_3$, $Y_0 = D_1 + D_3$. Standard mode requires single active line; Priority mode enforces $D_3 > D_2 > D_1 > D_0$.</li>
+          </ul>
+
+          <h3 class="text-sm font-bold text-cyber-cyan uppercase">GitHub Pages Deployment Instructions</h3>
+          <ol class="list-decimal pl-5 space-y-1 text-slate-300">
+            <li>Create a public GitHub Repository named <code>digital-logic-lab</code>.</li>
+            <li>Commit this single <code>index.html</code> file to the root directory.</li>
+            <li>In GitHub, navigate to <strong>Settings → Pages</strong>.</li>
+            <li>Under <strong>Source</strong>, select the <code>main</code> branch and folder <code>/ (root)</code>.</li>
+            <li>Click <strong>Save</strong>. Your site will automatically build and publish live!</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- INSPECTION HUD MODAL -->
+  <div id="inspector-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-cyber-cyan/40 shadow-2xl modal-enter space-y-4 relative">
+      <button onclick="closeInspectorModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 border-b border-cyber-border pb-3">
+        <div id="modal-icon-bg" class="p-2 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan">
+          <i data-lucide="cpu" class="w-5 h-5" id="modal-icon"></i>
+        </div>
+        <div>
+          <h3 id="modal-title" class="text-lg font-bold font-mono text-white">COMPONENT INSPECTOR</h3>
+          <p id="modal-subtitle" class="text-xs text-slate-400 font-mono">GATE DIAGNOSTIC</p>
+        </div>
+      </div>
+
+      <div id="modal-body" class="space-y-3 text-xs text-slate-300 leading-relaxed font-mono">
+        <!-- Injected via JS -->
+      </div>
+
+      <button onclick="closeInspectorModal()" class="w-full py-2 rounded-xl bg-cyber-dark border border-cyber-cyan/40 text-cyber-cyan text-xs font-mono font-bold hover:bg-cyber-cyan hover:text-slate-950 transition-all">
+        CLOSE INSPECTOR
+      </button>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="glass-panel border-t border-cyber-border/80 mt-12 py-6 px-4 text-center text-xs text-slate-500 font-mono">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div>DIGITAL LOGIC LAB — CIA III PROJECT</div>
+      <div>BUILT FOR COLLEGE ACADEMIC EVALUATION</div>
+      <div class="text-cyber-cyan">SR LATCH / FLIP-FLOP & ENCODER SIMULATOR</div>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT SIMULATION ENGINE & UI CONTROLLER -->
+  <script>
+    /* ================= GLOBAL STATE ENGINE ================= */
+    const state = {
+      currentPage: 'home',
+      audioEnabled: false,
+      
+      // SR Simulator State
+      sr: {
+        arch: 'nand-latch', // nand-latch | nor-latch | gated-sr | edge-sr
+        S: 1, // Default active-low inactive state for NAND
+        R: 1,
+        CLK: 1,
+        Q: 1,
+        Qbar: 0,
+        invalid: false,
+        tourStep: -1
+      },
+
+      // Encoder Simulator State
+      encoder: {
+        mode: 'standard', // standard | priority
+        inputs: [0, 0, 0, 0], // D0, D1, D2, D3
+        Y1: 0,
+        Y0: 0,
+        multipleInputs: false
+      },
+
+      // Learn Curriculum State
+      learnStep: 0,
+
+      // Timing Lab State
+      timingOffset: -20,
+
+      // Master Slave State
+      masterSlaveClk: 1,
+
+      // Challenge State
+      score: 0,
+      solved: [false, false, false, false]
+    };
+
+    /* Web Audio API Synthesizer for Cyber SFX */
+    let audioCtx = null;
+    function playBeep(freq = 440, type = 'sine', duration = 0.08) {
+      if (!state.audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      state.audioEnabled = !state.audioEnabled;
+      const icon = document.getElementById('audio-icon');
+      if (state.audioEnabled) {
+        icon.setAttribute('data-lucide', 'volume-2');
+        playBeep(880, 'triangle', 0.1);
+      } else {
+        icon.setAttribute('data-lucide', 'volume-x');
+      }
+      lucide.createIcons();
+    }
+
+    /* Navigation Controller */
+    function navigateTo(pageId) {
+      playBeep(600, 'sine', 0.05);
+      state.currentPage = pageId;
+      document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+      const target = document.getElementById(`page-${pageId}`);
+      if (target) target.classList.remove('hidden');
+
+      // Update Nav Buttons
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-cyber-cyan', 'bg-cyber-blue/20', 'border', 'border-cyber-cyan/40');
+        btn.classList.add('text-slate-400');
+      });
+      const activeNav = document.getElementById(`nav-${pageId}`);
+      if (activeNav) {
+        activeNav.classList.remove('text-slate-400');
+        activeNav.classList.add('text-cyber-cyan', 'bg-cyber-blue/20', 'border', 'border-cyber-cyan/40');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    /* ================= ARCHITECTURE COMPARISON WIDGET ================= */
+    let archMode = 'combinational';
+    function setArchMode(mode) {
+      archMode = mode;
+      const combBtn = document.getElementById('arch-btn-comb');
+      const seqBtn = document.getElementById('arch-btn-seq');
+      
+      if (mode === 'combinational') {
+        combBtn.className = 'px-3 py-1.5 rounded-lg font-mono font-bold text-cyber-cyan bg-cyber-blue/20';
+        seqBtn.className = 'px-3 py-1.5 rounded-lg font-mono font-bold text-slate-400 hover:text-white';
+      } else {
+        seqBtn.className = 'px-3 py-1.5 rounded-lg font-mono font-bold text-cyber-magenta bg-cyber-magenta/20';
+        combBtn.className = 'px-3 py-1.5 rounded-lg font-mono font-bold text-slate-400 hover:text-white';
+      }
+      renderArchDiagram();
+    }
+
+    function renderArchDiagram() {
+      const container = document.getElementById('arch-diagram-container');
+      const desc = document.getElementById('arch-description');
+
+      if (archMode === 'combinational') {
+        container.innerHTML = `
+          <svg viewBox="0 0 500 200" class="w-full h-auto">
+            <!-- Inputs -->
+            <text x="30" y="85" fill="#00f3ff" font-family="monospace" font-size="12">INPUTS</text>
+            <path d="M 80 80 L 180 80" stroke="#00f3ff" stroke-width="3" fill="none" class="active-wire-flow"/>
+            <path d="M 80 120 L 180 120" stroke="#00f3ff" stroke-width="3" fill="none" class="active-wire-flow"/>
+            
+            <!-- Logic Gate Block -->
+            <rect x="180" y="50" width="140" height="100" rx="12" fill="#121829" stroke="#00f3ff" stroke-width="2"/>
+            <text x="200" y="95" fill="#ffffff" font-family="monospace" font-size="14" font-weight="bold">COMBINATIONAL</text>
+            <text x="225" y="115" fill="#00f3ff" font-family="monospace" font-size="12">LOGIC</text>
+
+            <!-- Output -->
+            <path d="M 320 100 L 420 100" stroke="#00f3ff" stroke-width="3" fill="none" class="active-wire-flow"/>
+            <text x="430" y="105" fill="#00f3ff" font-family="monospace" font-size="12">OUTPUT</text>
+          </svg>
+        `;
+        desc.innerHTML = `
+          <div class="glass-card p-4 rounded-xl space-y-2 border-l-4 border-cyber-cyan">
+            <h4 class="text-sm font-bold text-white font-mono">COMBINATIONAL LOGIC</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              • Output depends <strong>ONLY</strong> on present inputs.<br>
+              • Contains <strong>NO memory elements</strong>.<br>
+              • Contains <strong>NO feedback paths</strong>.<br>
+              • Examples: Encoders, Decoders, Multiplexers, Adders.
+            </p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <svg viewBox="0 0 500 220" class="w-full h-auto">
+            <!-- Inputs -->
+            <text x="30" y="75" fill="#ff007f" font-family="monospace" font-size="12">INPUTS</text>
+            <path d="M 80 70 L 180 70" stroke="#ff007f" stroke-width="3" fill="none" class="active-wire-flow"/>
+            
+            <!-- Logic Block -->
+            <rect x="180" y="40" width="130" height="70" rx="10" fill="#121829" stroke="#ff007f" stroke-width="2"/>
+            <text x="210" y="80" fill="#ffffff" font-family="monospace" font-size="13" font-weight="bold">LOGIC GATES</text>
+
+            <!-- Output line -->
+            <path d="M 310 75 L 420 75" stroke="#ff007f" stroke-width="3" fill="none" class="active-wire-flow"/>
+            <text x="430" y="80" fill="#ff007f" font-family="monospace" font-size="12">OUTPUT</text>
+
+            <!-- Feedback path to Memory -->
+            <path d="M 360 75 L 360 160 L 310 160" stroke="#00f3ff" stroke-width="2" stroke-dasharray="4" fill="none"/>
+            
+            <!-- Memory Element -->
+            <rect x="180" y="130" width="130" height="60" rx="10" fill="#0b0f19" stroke="#00f3ff" stroke-width="2"/>
+            <text x="200" y="165" fill="#00f3ff" font-family="monospace" font-size="12" font-weight="bold">MEMORY (STATE)</text>
+
+            <!-- Memory feedback back to logic -->
+            <path d="M 180 160 L 130 160 L 130 95 L 180 95" stroke="#00f3ff" stroke-width="2" stroke-dasharray="4" fill="none"/>
+          </svg>
+        `;
+        desc.innerHTML = `
+          <div class="glass-card p-4 rounded-xl space-y-2 border-l-4 border-cyber-magenta">
+            <h4 class="text-sm font-bold text-white font-mono">SEQUENTIAL LOGIC</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              • Output depends on <strong>present inputs AND previous state</strong>.<br>
+              • Contains <strong>memory elements</strong> (Latches / Flip-Flops).<br>
+              • Requires <strong>feedback paths</strong> to retain state.<br>
+              • Examples: Registers, Counters, Flip-Flops.
+            </p>
+          </div>
+        `;
+      }
+    }
+
+    /* ================= LEARN CURRICULUM ENGINE ================= */
+    const curriculumData = [
+      {
+        title: "1. Combinational vs Sequential Logic",
+        content: `
+          <div class="lg:col-span-6 space-y-3">
+            <h3 class="text-xl font-bold text-cyber-cyan font-mono">The Memory Revolution</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              In combinational logic, outputs are purely a mathematical function of current inputs. Sequential logic introduces <strong>feedback loops</strong>—routing output signals back into inputs so the circuit can "remember" what happened in the past.
+            </p>
+            <div class="p-3 rounded-xl bg-cyber-dark border border-cyber-border text-xs text-slate-400">
+              <strong class="text-white">Key Takeaway:</strong> Sequential Logic = Present Inputs + Previous State History.
+            </div>
+          </div>
+          <div class="lg:col-span-6 flex justify-center">
+            <div class="p-4 rounded-2xl bg-cyber-dark border border-cyber-cyan/30 text-center space-y-2">
+              <i data-lucide="rotate-ccw" class="w-12 h-12 text-cyber-cyan mx-auto animate-spin" style="animation-duration: 8s;"></i>
+              <span class="text-xs font-mono text-cyber-cyan block">FEEDBACK LOOP ACTIVE</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        title: "2. Latches vs Edge-Triggered Flip-Flops",
+        content: `
+          <div class="lg:col-span-6 space-y-3">
+            <h3 class="text-xl font-bold text-cyber-magenta font-mono">Level vs Edge Sensitivity</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              • <strong>Latch:</strong> Level-sensitive. As long as the enable signal is HIGH, changes at inputs immediately propagate to output.<br><br>
+              • <strong>Flip-Flop:</strong> Edge-sensitive. Samples inputs exclusively during the brief <em>0 → 1 transition</em> (Rising Edge) or <em>1 → 0 transition</em> (Falling Edge) of a clock pulse.
+            </p>
+          </div>
+          <div class="lg:col-span-6 space-y-2 font-mono text-xs">
+            <div class="p-3 rounded-xl bg-cyber-dark border border-cyber-cyan/40">
+              <span class="text-cyber-cyan">LATCH (Level Sensitive):</span> Output transparent during EN = 1.
+            </div>
+            <div class="p-3 rounded-xl bg-cyber-dark border border-cyber-magenta/40">
+              <span class="text-cyber-magenta">FLIP-FLOP (Edge Sensitive):</span> Output updates ONLY at Clock Edge ↑.
+            </div>
+          </div>
+        `
+      },
+      {
+        title: "3. NAND-Based SR Latch (Active-Low)",
+        content: `
+          <div class="lg:col-span-6 space-y-3">
+            <h3 class="text-xl font-bold text-cyber-amber font-mono">Active-Low Convention (Class Notes)</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              A standard NAND-based SR latch operates on <strong>Active-Low inputs</strong> (labeled $S'$ and $R'$ or $\bar{S}, \bar{R}$).<br><br>
+              • Pulling $S' = 0$ forces <strong>SET ($Q=1$)</strong>.<br>
+              • Pulling $R' = 0$ forces <strong>RESET ($Q=0$)</strong>.<br>
+              • Keeping $S'=1, R'=1$ is the <strong>HOLD/MEMORY</strong> state.<br>
+              • $S'=0, R'=0$ is <strong>INVALID</strong> ($Q=1, \bar{Q}=1$).
+            </p>
+          </div>
+          <div class="lg:col-span-6 bg-cyber-dark p-4 rounded-xl border border-cyber-border font-mono text-xs">
+            <table class="w-full text-center">
+              <tr class="text-cyber-amber border-b border-cyber-border"><th>S'</th><th>R'</th><th>Q</th><th>Q̅</th><th>STATE</th></tr>
+              <tr><td>1</td><td>1</td><td>Q</td><td>Q̅</td><td class="text-cyber-cyan">HOLD</td></tr>
+              <tr><td>0</td><td>1</td><td>1</td><td>0</td><td class="text-cyber-green">SET</td></tr>
+              <tr><td>1</td><td>0</td><td>0</td><td>1</td><td class="text-cyber-blue">RESET</td></tr>
+              <tr><td>0</td><td>0</td><td>1</td><td>1</td><td class="text-cyber-red">INVALID</td></tr>
+            </table>
+          </div>
+        `
+      },
+      {
+        title: "4. Setup, Hold, and Propagation Delays",
+        content: `
+          <div class="lg:col-span-6 space-y-3">
+            <h3 class="text-xl font-bold text-cyber-green font-mono">Real-World Timing Constraints</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Real transistors do not switch instantly.<br><br>
+              • <strong>Setup Time ($t_{su}$):</strong> Minimum time data must be stable BEFORE clock edge.<br>
+              • <strong>Hold Time ($t_h$):</strong> Minimum time data must remain stable AFTER clock edge.<br>
+              • Violating these timing windows causes <strong>metastability</strong> (unpredictable output oscillations).
+            </p>
+          </div>
+          <div class="lg:col-span-6 flex justify-center">
+            <button onclick="navigateTo('timing')" class="px-6 py-3 rounded-xl bg-cyber-green/20 border border-cyber-green text-cyber-green font-mono text-xs font-bold hover:bg-cyber-green hover:text-slate-950 transition-all">
+              OPEN TIMING SIMULATOR →
+            </button>
+          </div>
+        `
+      }
+    ];
+
+    function renderLearnStep() {
+      const step = curriculumData[state.learnStep];
+      document.getElementById('learn-step-indicator').innerText = `Step ${state.learnStep + 1} / ${curriculumData.length}`;
+      document.getElementById('learn-card-content').innerHTML = step.content;
+      
+      document.getElementById('learn-prev-btn').disabled = (state.learnStep === 0);
+      document.getElementById('learn-next-btn').disabled = (state.learnStep === curriculumData.length - 1);
+      lucide.createIcons();
+    }
+
+    function stepLearn(dir) {
+      state.learnStep = Math.max(0, Math.min(curriculumData.length - 1, state.learnStep + dir));
+      renderLearnStep();
+    }
+
+    /* ================= CORE SR SIMULATION ENGINE ================= */
+    function evaluateSRLogic() {
+      const arch = state.sr.arch;
+      let S = state.sr.S;
+      let R = state.sr.R;
+      let CLK = state.sr.CLK;
+
+      state.sr.invalid = false;
+
+      if (arch === 'nand-latch') {
+        // Active-Low S', R'
+        if (S === 0 && R === 1) {
+          state.sr.Q = 1; state.sr.Qbar = 0;
+        } else if (S === 1 && R === 0) {
+          state.sr.Q = 0; state.sr.Qbar = 1;
+        } else if (S === 0 && R === 0) {
+          state.sr.Q = 1; state.sr.Qbar = 1; // Both forced high in NAND
+          state.sr.invalid = true;
+        } // 1,1 is HOLD (retain previous state)
+      } 
+      else if (arch === 'nor-latch') {
+        // Active-High S, R
+        if (S === 1 && R === 0) {
+          state.sr.Q = 1; state.sr.Qbar = 0;
+        } else if (S === 0 && R === 1) {
+          state.sr.Q = 0; state.sr.Qbar = 1;
+        } else if (S === 1 && R === 1) {
+          state.sr.Q = 0; state.sr.Qbar = 0; // Both forced low in NOR
+          state.sr.invalid = true;
+        } // 0,0 is HOLD
+      }
+      else if (arch === 'gated-sr') {
+        // Gated SR (CLK / EN active high)
+        if (CLK === 1) {
+          if (S === 1 && R === 0) { state.sr.Q = 1; state.sr.Qbar = 0; }
+          else if (S === 0 && R === 1) { state.sr.Q = 0; state.sr.Qbar = 1; }
+          else if (S === 1 && R === 1) { state.sr.Q = 1; state.sr.Qbar = 1; state.sr.invalid = true; }
+        }
+      }
+      else if (arch === 'edge-sr') {
+        // Handled via clock pulse trigger
+      }
+
+      updateSRUI();
+    }
+
+    function toggleSRInput(pin) {
+      playBeep(700, 'sine', 0.04);
+      if (pin === 'S') state.sr.S = state.sr.S === 1 ? 0 : 1;
+      if (pin === 'R') state.sr.R = state.sr.R === 1 ? 0 : 1;
+      if (pin === 'CLK') state.sr.CLK = state.sr.CLK === 1 ? 0 : 1;
+      
+      logSREvent(`${pin} changed to ${pin === 'S' || pin === 'R' ? state.sr[pin] : state.sr.CLK}`);
+      evaluateSRLogic();
+    }
+
+    function triggerClockPulse() {
+      playBeep(900, 'square', 0.08);
+      logSREvent("CLOCK PULSE TRIGGERED ↑");
+      state.sr.CLK = 1;
+      evaluateSRLogic();
+      setTimeout(() => {
+        state.sr.CLK = 0;
+        evaluateSRLogic();
+      }, 400);
+    }
+
+    function changeSRArchitecture(newArch) {
+      state.sr.arch = newArch;
+      if (newArch === 'nand-latch') {
+        state.sr.S = 1; state.sr.R = 1; // Inactive active-low
+      } else {
+        state.sr.S = 0; state.sr.R = 0; // Inactive active-high
+      }
+      logSREvent(`Switched Architecture to ${newArch.toUpperCase()}`);
+      evaluateSRLogic();
+    }
+
+    function logSREvent(msg) {
+      const logBox = document.getElementById('sr-event-log');
+      const time = new Date().toISOString().substring(11, 23);
+      const entry = document.createElement('div');
+      entry.className = "text-slate-300 border-b border-cyber-border/40 py-0.5";
+      entry.innerHTML = `<span class="text-cyber-cyan">[${time}]</span> ${msg}`;
+      logBox.prepend(entry);
+    }
+
+    function clearSRLogs() {
+      document.getElementById('sr-event-log').innerHTML = '';
+    }
+
+    function updateSRUI() {
+      // 1. Outputs
+      document.getElementById('sr-q-val').innerText = state.sr.Q;
+      document.getElementById('sr-qbar-val').innerText = state.sr.Qbar;
+
+      // 2. State Badge
+      const stateCard = document.getElementById('sr-state-card');
+      const stateTitle = document.getElementById('sr-state-title');
+      const stateIcon = document.getElementById('sr-state-icon');
+      const stateDesc = document.getElementById('sr-state-desc');
+      const conventionBadge = document.getElementById('sr-convention-badge');
+
+      let stateName = "HOLD";
+      let colorClass = "cyber-cyan";
+
+      if (state.sr.invalid) {
+        stateName = "INVALID / METASTABLE";
+        colorClass = "cyber-red";
+        stateDesc.innerText = "WARNING: Invalid input combination! Output states violate logic complement rules.";
+      } else if (state.sr.Q === 1 && state.sr.Qbar === 0) {
+        stateName = "SET";
+        colorClass = "cyber-green";
+        stateDesc.innerText = "Bit '1' stored. Q output is HIGH. Circuit retains state.";
+      } else if (state.sr.Q === 0 && state.sr.Qbar === 1) {
+        stateName = "RESET";
+        colorClass = "cyber-blue";
+        stateDesc.innerText = "Bit '0' stored. Q output is LOW. Circuit reset.";
+      } else {
+        stateName = "HOLD / MEMORY";
+        colorClass = "cyber-cyan";
+        stateDesc.innerText = "No active set/reset signal. Circuit is currently REMEMBERING previous output state.";
+      }
+
+      stateTitle.innerText = stateName;
+      stateTitle.className = `text-xl font-mono font-extrabold text-${colorClass}`;
+      stateIcon.innerText = stateName[0];
+
+      if (state.sr.arch === 'nand-latch') {
+        conventionBadge.innerText = "ACTIVE-LOW (S', R')";
+        conventionBadge.className = "px-2 py-0.5 rounded bg-cyber-amber/10 border border-cyber-amber/30 text-cyber-amber";
+      } else {
+        conventionBadge.innerText = "ACTIVE-HIGH (S, R)";
+        conventionBadge.className = "px-2 py-0.5 rounded bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan";
+      }
+
+      // 3. Render Inputs Bar
+      const inputControls = document.getElementById('sr-input-controls');
+      const isNand = state.sr.arch === 'nand-latch';
+      const sLabel = isNand ? "S' (Set)" : "S (Set)";
+      const rLabel = isNand ? "R' (Reset)" : "R (Reset)";
+
+      inputControls.innerHTML = `
+        <button onclick="toggleSRInput('S')" class="px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all ${state.sr.S === 1 ? 'bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan' : 'bg-cyber-dark border-cyber-border text-slate-400'}">
+          ${sLabel}: ${state.sr.S}
+        </button>
+        <button onclick="toggleSRInput('R')" class="px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all ${state.sr.R === 1 ? 'bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan' : 'bg-cyber-dark border-cyber-border text-slate-400'}">
+          ${rLabel}: ${state.sr.R}
+        </button>
+        ${state.sr.arch.includes('gated') || state.sr.arch.includes('edge') ? `
+          <button onclick="toggleSRInput('CLK')" class="px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all ${state.sr.CLK === 1 ? 'bg-cyber-amber/20 border-cyber-amber text-cyber-amber' : 'bg-cyber-dark border-cyber-border text-slate-400'}">
+            CLK: ${state.sr.CLK}
+          </button>
+          <button onclick="triggerClockPulse()" class="px-3 py-1.5 rounded-xl bg-cyber-amber/20 border border-cyber-amber text-cyber-amber text-xs font-mono font-bold hover:bg-cyber-amber hover:text-slate-950 transition-all">
+            PULSE ↑
+          </button>
+        ` : ''}
+      `;
+
+      // 4. Render SVG Circuit
+      renderSRSVG();
+
+      // 5. Render Truth Table
+      renderSRTruthTable();
+    }
+
+    function renderSRSVG() {
+      const container = document.getElementById('sr-svg-container');
+      const isNand = state.sr.arch === 'nand-latch';
+      const S = state.sr.S;
+      const R = state.sr.R;
+      const Q = state.sr.Q;
+      const Qbar = state.sr.Qbar;
+
+      const sColor = S ? "#00f3ff" : "#334155";
+      const rColor = R ? "#00f3ff" : "#334155";
+      const qColor = Q ? "#00ff88" : "#334155";
+      const qbarColor = Qbar ? "#00ff88" : "#334155";
+
+      container.innerHTML = `
+        <svg viewBox="0 0 600 280" class="w-full h-auto">
+          <!-- Input Wires -->
+          <path d="M 60 70 L 220 70" stroke="${sColor}" stroke-width="4" fill="none" class="${S ? 'active-wire-flow' : ''}" onclick="inspectWire('${isNand ? "S'" : "S" }', ${S})" class="cursor-pointer"/>
+          <path d="M 60 210 L 220 210" stroke="${rColor}" stroke-width="4" fill="none" class="${R ? 'active-wire-flow' : ''}" onclick="inspectWire('${isNand ? "R'" : "R" }', ${R})" class="cursor-pointer"/>
+
+          <!-- Input Pins -->
+          <text x="20" y="75" fill="${sColor}" font-family="monospace" font-size="16" font-weight="bold">${isNand ? "S'" : "S"}</text>
+          <text x="20" y="215" fill="${rColor}" font-family="monospace" font-size="16" font-weight="bold">${isNand ? "R'" : "R"}</text>
+
+          <!-- Gate 1 (Top Gate) -->
+          <g onclick="inspectGate('${isNand ? 'NAND' : 'NOR'} 1')" class="cursor-pointer">
+            <rect x="220" y="40" width="100" height="60" rx="10" fill="#121829" stroke="#00f3ff" stroke-width="2"/>
+            <text x="245" y="75" fill="#ffffff" font-family="monospace" font-size="14" font-weight="bold">${isNand ? 'NAND1' : 'NOR1'}</text>
+          </g>
+
+          <!-- Gate 2 (Bottom Gate) -->
+          <g onclick="inspectGate('${isNand ? 'NAND' : 'NOR'} 2')" class="cursor-pointer">
+            <rect x="220" y="180" width="100" height="60" rx="10" fill="#121829" stroke="#00f3ff" stroke-width="2"/>
+            <text x="245" y="215" fill="#ffffff" font-family="monospace" font-size="14" font-weight="bold">${isNand ? 'NAND2' : 'NOR2'}</text>
+          </g>
+
+          <!-- Output Wires -->
+          <path d="M 320 70 L 480 70" stroke="${qColor}" stroke-width="4" fill="none" class="${Q ? 'active-wire-flow' : ''}"/>
+          <path d="M 320 210 L 480 210" stroke="${qbarColor}" stroke-width="4" fill="none" class="${Qbar ? 'active-wire-flow' : ''}"/>
+
+          <!-- Output Labels -->
+          <text x="500" y="75" fill="${qColor}" font-family="monospace" font-size="18" font-weight="bold">Q = ${Q}</text>
+          <text x="500" y="215" fill="${qbarColor}" font-family="monospace" font-size="18" font-weight="bold">Q̅ = ${Qbar}</text>
+
+          <!-- Cross Feedback Paths -->
+          <!-- Top Output down to Bottom Gate input -->
+          <path d="M 400 70 L 400 130 L 180 130 L 180 190 L 220 190" stroke="${qColor}" stroke-width="2" stroke-dasharray="4" fill="none"/>
+          <!-- Bottom Output up to Top Gate input -->
+          <path d="M 420 210 L 420 150 L 190 150 L 190 90 L 220 90" stroke="${qbarColor}" stroke-width="2" stroke-dasharray="4" fill="none"/>
+        </svg>
+      `;
+    }
+
+    function renderSRTruthTable() {
+      const table = document.getElementById('sr-truth-table');
+      const isNand = state.sr.arch === 'nand-latch';
+
+      if (isNand) {
+        table.innerHTML = `
+          <thead>
+            <tr class="text-slate-400 border-b border-cyber-border">
+              <th class="p-1">S'</th><th class="p-1">R'</th><th class="p-1">Q</th><th class="p-1">Q̅</th><th class="p-1">STATE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="applySRTruthRow(1,1)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===1&&state.sr.R===1 ? 'bg-cyber-blue/30 text-cyber-cyan font-bold' : 'text-slate-300'}"><td class="p-1">1</td><td class="p-1">1</td><td class="p-1">Q</td><td class="p-1">Q̅</td><td class="p-1">HOLD</td></tr>
+            <tr onclick="applySRTruthRow(0,1)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===0&&state.sr.R===1 ? 'bg-cyber-blue/30 text-cyber-green font-bold' : 'text-slate-300'}"><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">SET</td></tr>
+            <tr onclick="applySRTruthRow(1,0)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===1&&state.sr.R===0 ? 'bg-cyber-blue/30 text-cyber-blue font-bold' : 'text-slate-300'}"><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">RESET</td></tr>
+            <tr onclick="applySRTruthRow(0,0)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===0&&state.sr.R===0 ? 'bg-cyber-red/30 text-cyber-red font-bold' : 'text-slate-300'}"><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">1</td><td class="p-1">INVALID</td></tr>
+          </tbody>
+        `;
+      } else {
+        table.innerHTML = `
+          <thead>
+            <tr class="text-slate-400 border-b border-cyber-border">
+              <th class="p-1">S</th><th class="p-1">R</th><th class="p-1">Q</th><th class="p-1">Q̅</th><th class="p-1">STATE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="applySRTruthRow(0,0)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===0&&state.sr.R===0 ? 'bg-cyber-blue/30 text-cyber-cyan font-bold' : 'text-slate-300'}"><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">Q</td><td class="p-1">Q̅</td><td class="p-1">HOLD</td></tr>
+            <tr onclick="applySRTruthRow(1,0)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===1&&state.sr.R===0 ? 'bg-cyber-blue/30 text-cyber-green font-bold' : 'text-slate-300'}"><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">SET</td></tr>
+            <tr onclick="applySRTruthRow(0,1)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===0&&state.sr.R===1 ? 'bg-cyber-blue/30 text-cyber-blue font-bold' : 'text-slate-300'}"><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">RESET</td></tr>
+            <tr onclick="applySRTruthRow(1,1)" class="cursor-pointer hover:bg-cyber-cyan/10 ${state.sr.S===1&&state.sr.R===1 ? 'bg-cyber-red/30 text-cyber-red font-bold' : 'text-slate-300'}"><td class="p-1">1</td><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">INVALID</td></tr>
+          </tbody>
+        `;
+      }
+    }
+
+    function applySRTruthRow(s, r) {
+      state.sr.S = s;
+      state.sr.R = r;
+      logSREvent(`Applied truth row: S=${s}, R=${r}`);
+      evaluateSRLogic();
+    }
+
+    function triggerMemoryTest() {
+      logSREvent(">>> AUTOMATED MEMORY TEST STARTED <<<");
+      const isNand = state.sr.arch === 'nand-latch';
+      
+      // Step 1: Set
+      setTimeout(() => { applySRTruthRow(isNand ? 0 : 1, isNand ? 1 : 0); }, 300);
+      // Step 2: Hold (Check Q retains 1)
+      setTimeout(() => { applySRTruthRow(isNand ? 1 : 0, isNand ? 1 : 0); }, 1500);
+      // Step 3: Reset
+      setTimeout(() => { applySRTruthRow(isNand ? 1 : 0, isNand ? 0 : 1); }, 2700);
+      // Step 4: Hold (Check Q retains 0)
+      setTimeout(() => { applySRTruthRow(isNand ? 1 : 0, isNand ? 1 : 0); }, 3900);
+    }
+
+    function resetSRSimulator() {
+      state.sr.S = state.sr.arch === 'nand-latch' ? 1 : 0;
+      state.sr.R = state.sr.arch === 'nand-latch' ? 1 : 0;
+      state.sr.CLK = 1;
+      evaluateSRLogic();
+      clearSRLogs();
+      logSREvent("Simulator reset to initial state.");
+    }
+
+    /* Inspector Modal Handlers */
+    function inspectGate(gateName) {
+      playBeep(800, 'sine', 0.05);
+      const isNand = gateName.includes('NAND');
+      document.getElementById('modal-title').innerText = `${gateName} DIAGNOSTICS`;
+      document.getElementById('modal-subtitle').innerText = "LOGIC GATE COMPONENT";
+      document.getElementById('modal-body').innerHTML = `
+        <p><strong>Function:</strong> ${isNand ? 'NAND Gate (Inverted AND)' : 'NOR Gate (Inverted OR)'}</p>
+        <p><strong>Rule:</strong> ${isNand ? 'Output is LOW (0) ONLY when all inputs are HIGH (1).' : 'Output is HIGH (1) ONLY when all inputs are LOW (0).'}</p>
+        <div class="p-3 bg-cyber-dark rounded-xl border border-cyber-border my-2">
+          <strong class="text-cyber-cyan block mb-1">${gateName} Truth Table:</strong>
+          ${isNand ? 'A=0, B=0 → 1<br>A=0, B=1 → 1<br>A=1, B=0 → 1<br>A=1, B=1 → 0' : 'A=0, B=0 → 1<br>A=0, B=1 → 0<br>A=1, B=0 → 0<br>A=1, B=1 → 0'}
+        </div>
+      `;
+      document.getElementById('inspector-modal').classList.remove('hidden');
+      document.getElementById('inspector-modal').classList.add('flex');
+    }
+
+    function inspectWire(wireName, val) {
+      playBeep(800, 'sine', 0.05);
+      document.getElementById('modal-title').innerText = `WIRE TRACE: ${wireName}`;
+      document.getElementById('modal-subtitle').innerText = "SIGNAL TRACE DIAGNOSTIC";
+      document.getElementById('modal-body').innerHTML = `
+        <p><strong>Signal State:</strong> <span class="${val ? 'text-cyber-cyan font-bold' : 'text-slate-500'}">${val ? 'HIGH (1 / VCC)' : 'LOW (0 / GND)'}</span></p>
+        <p><strong>Trace Destination:</strong> Logic Gate Input Terminal</p>
+      `;
+      document.getElementById('inspector-modal').classList.remove('hidden');
+      document.getElementById('inspector-modal').classList.add('flex');
+    }
+
+    function closeInspectorModal() {
+      document.getElementById('inspector-modal').classList.add('hidden');
+      document.getElementById('inspector-modal').classList.remove('flex');
+    }
+
+    /* ================= 4-TO-2 ENCODER LAB ENGINE ================= */
+    function setEncoderMode(mode) {
+      state.encoder.mode = mode;
+      document.getElementById('enc-btn-std').className = mode === 'standard' ? 'px-3 py-1 rounded-lg text-xs font-mono font-bold text-cyber-cyan bg-cyber-blue/20' : 'px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white';
+      document.getElementById('enc-btn-prio').className = mode === 'priority' ? 'px-3 py-1 rounded-lg text-xs font-mono font-bold text-cyber-magenta bg-cyber-magenta/20' : 'px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white';
+      evaluateEncoder();
+    }
+
+    function toggleEncoderInput(idx) {
+      playBeep(750, 'sine', 0.04);
+      if (state.encoder.mode === 'standard') {
+        // In standard mode, single pick or toggle
+        state.encoder.inputs[idx] = state.encoder.inputs[idx] === 1 ? 0 : 1;
+      } else {
+        state.encoder.inputs[idx] = state.encoder.inputs[idx] === 1 ? 0 : 1;
+      }
+      evaluateEncoder();
+    }
+
+    function evaluateEncoder() {
+      const inputs = state.encoder.inputs;
+      const activeCount = inputs.filter(x => x === 1).length;
+      state.encoder.multipleInputs = (activeCount > 1 && state.encoder.mode === 'standard');
+
+      if (state.encoder.mode === 'standard') {
+        // Y1 = D2 + D3, Y0 = D1 + D3
+        state.encoder.Y1 = (inputs[2] || inputs[3]) ? 1 : 0;
+        state.encoder.Y0 = (inputs[1] || inputs[3]) ? 1 : 0;
+      } else {
+        // Priority Mode (D3 highest priority)
+        if (inputs[3] === 1) { state.encoder.Y1 = 1; state.encoder.Y0 = 1; }
+        else if (inputs[2] === 1) { state.encoder.Y1 = 1; state.encoder.Y0 = 0; }
+        else if (inputs[1] === 1) { state.encoder.Y1 = 0; state.encoder.Y0 = 1; }
+        else { state.encoder.Y1 = 0; state.encoder.Y0 = 0; }
+      }
+
+      updateEncoderUI();
+    }
+
+    function updateEncoderUI() {
+      // 1. Update Input Buttons
+      for (let i = 0; i < 4; i++) {
+        const btn = document.getElementById(`enc-in-${i}`);
+        const active = state.encoder.inputs[i] === 1;
+        btn.className = `p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1 cursor-pointer ${active ? 'bg-cyber-magenta/20 border-cyber-magenta text-cyber-magenta shadow-glow-magenta' : 'bg-cyber-dark border-cyber-border text-slate-400'}`;
+        btn.querySelector('span:nth-child(2)').innerText = active ? "HIGH (1)" : "LOW (0)";
+      }
+
+      // 2. Output Display
+      document.getElementById('enc-y1-val').innerText = state.encoder.Y1;
+      document.getElementById('enc-y0-val').innerText = state.encoder.Y0;
+      const dec = state.encoder.Y1 * 2 + state.encoder.Y0;
+      document.getElementById('enc-dec-val').innerText = dec;
+
+      // 3. Warning Box
+      const warnBox = document.getElementById('enc-warning-box');
+      if (state.encoder.multipleInputs) warnBox.classList.remove('hidden');
+      else warnBox.classList.add('hidden');
+
+      // 4. SVG Diagram
+      renderEncoderSVG();
+
+      // 5. Truth Table
+      renderEncoderTruthTable();
+    }
+
+    function renderEncoderSVG() {
+      const container = document.getElementById('encoder-svg-container');
+      const inP = state.encoder.inputs;
+      const Y1 = state.encoder.Y1;
+      const Y0 = state.encoder.Y0;
+
+      container.innerHTML = `
+        <svg viewBox="0 0 550 260" class="w-full h-auto">
+          <!-- Input Wires -->
+          <path d="M 50 40 L 220 40" stroke="${inP[0] ? '#ff007f' : '#334155'}" stroke-width="3" fill="none"/>
+          <path d="M 50 100 L 220 100" stroke="${inP[1] ? '#ff007f' : '#334155'}" stroke-width="3" fill="none"/>
+          <path d="M 50 160 L 220 160" stroke="${inP[2] ? '#ff007f' : '#334155'}" stroke-width="3" fill="none"/>
+          <path d="M 50 220 L 220 220" stroke="${inP[3] ? '#ff007f' : '#334155'}" stroke-width="3" fill="none"/>
+
+          <text x="15" y="45" fill="#ffffff" font-family="monospace" font-size="12">D0</text>
+          <text x="15" y="105" fill="#ffffff" font-family="monospace" font-size="12">D1</text>
+          <text x="15" y="165" fill="#ffffff" font-family="monospace" font-size="12">D2</text>
+          <text x="15" y="225" fill="#ffffff" font-family="monospace" font-size="12">D3</text>
+
+          <!-- Encoder Box -->
+          <rect x="220" y="20" width="140" height="220" rx="16" fill="#121829" stroke="#ff007f" stroke-width="2"/>
+          <text x="240" y="125" fill="#ffffff" font-family="monospace" font-size="14" font-weight="bold">4-TO-2 LOGIC</text>
+          <text x="255" y="145" fill="#ff007f" font-family="monospace" font-size="11">Y1 = D2+D3</text>
+          <text x="255" y="160" fill="#ff007f" font-family="monospace" font-size="11">Y0 = D1+D3</text>
+
+          <!-- Output Lines -->
+          <path d="M 360 80 L 480 80" stroke="${Y1 ? '#ff007f' : '#334155'}" stroke-width="4" fill="none" class="${Y1 ? 'active-wire-flow' : ''}"/>
+          <path d="M 360 180 L 480 180" stroke="${Y0 ? '#ff007f' : '#334155'}" stroke-width="4" fill="none" class="${Y0 ? 'active-wire-flow' : ''}"/>
+
+          <text x="495" y="85" fill="${Y1 ? '#ff007f' : '#ffffff'}" font-family="monospace" font-size="14" font-weight="bold">Y1 = ${Y1}</text>
+          <text x="495" y="185" fill="${Y0 ? '#ff007f' : '#ffffff'}" font-family="monospace" font-size="14" font-weight="bold">Y0 = ${Y0}</text>
+        </svg>
+      `;
+    }
+
+    function renderEncoderTruthTable() {
+      const table = document.getElementById('encoder-truth-table');
+      table.innerHTML = `
+        <thead>
+          <tr class="text-slate-400 border-b border-cyber-border">
+            <th class="p-1">D3</th><th class="p-1">D2</th><th class="p-1">D1</th><th class="p-1">D0</th><th class="p-1">Y1</th><th class="p-1">Y0</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="text-slate-300 hover:bg-cyber-magenta/10"><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">0</td></tr>
+          <tr class="text-slate-300 hover:bg-cyber-magenta/10"><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">1</td></tr>
+          <tr class="text-slate-300 hover:bg-cyber-magenta/10"><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">0</td></tr>
+          <tr class="text-slate-300 hover:bg-cyber-magenta/10"><td class="p-1">1</td><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">0</td><td class="p-1">1</td><td class="p-1">1</td></tr>
+        </tbody>
+      `;
+    }
+
+    /* ================= TIMING & MASTER SLAVE LAB ENGINE ================= */
+    function updateTimingLab(val) {
+      state.timingOffset = parseInt(val);
+      document.getElementById('timing-offset-val').innerText = `${state.timingOffset} ns`;
+      renderTimingSVG();
+    }
+
+    function renderTimingSVG() {
+      const container = document.getElementById('timing-svg-container');
+      const offset = state.timingOffset;
+      const isViolation = Math.abs(offset) < 15; // Setup/Hold Violation Zone
+
+      const badge = document.getElementById('timing-status-badge');
+      if (isViolation) {
+        badge.innerText = "TIMING VIOLATION (METASTABLE RISK)";
+        badge.className = "px-2 py-0.5 rounded bg-cyber-red/10 text-cyber-red border border-cyber-red/30";
+      } else {
+        badge.innerText = "VALID TIMING WINDOW";
+        badge.className = "px-2 py-0.5 rounded bg-cyber-green/10 text-cyber-green border border-cyber-green/30";
+      }
+
+      const dataX = 250 + offset * 3;
+
+      container.innerHTML = `
+        <svg viewBox="0 0 500 160" class="w-full h-full">
+          <!-- Clock Wave -->
+          <text x="10" y="45" fill="#ffaa00" font-family="monospace" font-size="12">CLK</text>
+          <path d="M 50 50 L 250 50 L 250 10 L 450 10" stroke="#ffaa00" stroke-width="3" fill="none"/>
+          
+          <!-- Clock Edge Marker -->
+          <line x1="250" y1="0" x2="250" y2="160" stroke="#ffaa00" stroke-width="1" stroke-dasharray="4"/>
+          <text x="255" y="150" fill="#ffaa00" font-family="monospace" font-size="10">Active Edge ↑</text>
+
+          <!-- Data Wave -->
+          <text x="10" y="115" fill="#00f3ff" font-family="monospace" font-size="12">DATA</text>
+          <path d="M 50 120 L ${dataX} 120 L ${dataX} 80 L 450 80" stroke="${isViolation ? '#ff3366' : '#00f3ff'}" stroke-width="3" fill="none"/>
+
+          <!-- Setup Window Zone (-15 to 0) -->
+          <rect x="205" y="0" width="45" height="160" fill="rgba(255, 0, 127, 0.15)"/>
+          <text x="208" y="20" fill="#ff007f" font-family="monospace" font-size="9">t_su</text>
+
+          <!-- Hold Window Zone (0 to 15) -->
+          <rect x="250" y="0" width="45" height="160" fill="rgba(0, 243, 255, 0.15)"/>
+          <text x="255" y="20" fill="#00f3ff" font-family="monospace" font-size="9">t_h</text>
+        </svg>
+      `;
+    }
+
+    function stepMasterSlaveClock() {
+      state.masterSlaveClk = state.masterSlaveClk === 1 ? 0 : 1;
+      document.getElementById('ms-clk-val').innerText = state.masterSlaveClk;
+      renderMasterSlaveSVG();
+    }
+
+    function renderMasterSlaveSVG() {
+      const container = document.getElementById('masterslave-svg-container');
+      const clk = state.masterSlaveClk;
+
+      container.innerHTML = `
+        <svg viewBox="0 0 500 180" class="w-full h-full">
+          <!-- Master Stage -->
+          <rect x="80" y="40" width="130" height="100" rx="12" fill="#121829" stroke="${clk ? '#00f3ff' : '#334155'}" stroke-width="${clk ? '3' : '1'}"/>
+          <text x="110" y="85" fill="#ffffff" font-family="monospace" font-size="14" font-weight="bold">MASTER</text>
+          <text x="105" y="110" fill="${clk ? '#00f3ff' : '#334155'}" font-family="monospace" font-size="11">${clk ? 'ENABLED (CLK=1)' : 'DISABLED'}</text>
+
+          <!-- Interstage Connection -->
+          <path d="M 210 90 L 290 90" stroke="${clk ? '#00f3ff' : '#ff007f'}" stroke-width="3" stroke-dasharray="4" fill="none"/>
+
+          <!-- Slave Stage -->
+          <rect x="290" y="40" width="130" height="100" rx="12" fill="#121829" stroke="${!clk ? '#ff007f' : '#334155'}" stroke-width="${!clk ? '3' : '1'}"/>
+          <text x="330" y="85" fill="#ffffff" font-family="monospace" font-size="14" font-weight="bold">SLAVE</text>
+          <text x="315" y="110" fill="${!clk ? '#ff007f' : '#334155'}" font-family="monospace" font-size="11">${!clk ? 'ENABLED (CLK=0)' : 'DISABLED'}</text>
+        </svg>
+      `;
+    }
+
+    /* ================= CHALLENGES & QUIZ ENGINE ================= */
+    const challengeAnswers = { 1: 'A', 2: 'B', 3: 'B', 4: 'B' };
+
+    function submitChallenge(id, option) {
+      if (state.solved[id - 1]) return;
+      playBeep(900, 'sine', 0.1);
+
+      const statusEl = document.getElementById(`ch-status-${id}`);
+      const cardEl = document.getElementById(`ch-card-${id}`);
+
+      if (option === challengeAnswers[id]) {
+        state.score += 100;
+        state.solved[id - 1] = true;
+        statusEl.innerText = "SOLVED (+100 PTS)";
+        statusEl.className = "text-xs font-mono text-cyber-green font-bold";
+        cardEl.classList.add('bg-cyber-green/5');
+        document.getElementById('challenge-score').innerText = state.score;
+      } else {
+        statusEl.innerText = "INCORRECT — TRY AGAIN";
+        statusEl.className = "text-xs font-mono text-cyber-red font-bold";
+      }
+    }
+
+    function copyReadmeText() {
+      const readmeText = `
+# DIGITAL LOGIC LAB - SR Latch / SR Flip-Flop & Encoder Simulator
+College Digital Logic CIA III Project Submission
+
+## Overview
+An interactive cyberpunk digital logic suite built to demonstrate memory feedback loops (SR Latch/Flip-Flop) and combinational logic encoding (4-to-2 Encoder).
+
+## Features
+- Active-Low NAND SR Latch & Active-High NOR SR Latch simulation
+- Level-sensitive and Edge-triggered clocking
+- 4-to-2 Priority and Standard Encoder
+- Setup, Hold, and Propagation delay visualization
+- Hands-on Challenges and Diagnostics
+      `;
+      document.execCommand('copy');
+      alert('README Markdown copied to clipboard!');
+    }
+
+    /* Initialize Web Application on Window Load */
+    window.onload = function() {
+      lucide.createIcons();
+      setArchMode('combinational');
+      renderLearnStep();
+      evaluateSRLogic();
+      evaluateEncoder();
+      renderTimingSVG();
+      renderMasterSlaveSVG();
+    };
+  </script>
+</body>
+</html>
